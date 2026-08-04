@@ -1,12 +1,6 @@
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-
-"""Constants"""
-
-CUISINE_WEIGHT = 3.0
-TYPE_WEIGHT = 2.0
-EXPERIENCE_WEIGHT = 1.5
-NUMERIC_WEIGHT = 1.0
+from src.spatial import prepare_spatial_features
 
 SIMILARITY_WEIGHT = 0.70
 PROXIMITY_WEIGHT = 0.30
@@ -65,7 +59,12 @@ def get_top_recommendations(
 
     filtered_df = similarity_df.drop(selected_index)
 
-    filtered_df = filtered_df.copy()
+    filtered_df = filtered_df[
+    restaurants.loc[
+        filtered_df.index,
+        "distance_km"
+    ] <= SEARCH_RADIUS_KM
+    ]
 
     filtered_df["proximity_score"] = restaurants.loc[
         filtered_df.index,
@@ -131,6 +130,15 @@ def recommend_restaurants(
         city,
         restaurants
     )
+
+    selected_restaurant = restaurants.loc[selected_index]
+
+    restaurants = prepare_spatial_features(
+    restaurants=restaurants,
+    selected_restaurant=selected_restaurant
+
+    )
+    
 
     selected_vector = get_feature_vector(
         selected_index,
