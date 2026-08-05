@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from streamlit_folium import st_folium
 
 from src.preprocessing import (
     extract_features,
@@ -7,20 +8,25 @@ from src.preprocessing import (
 )
 
 from src.recommender import (
-    recommend_restaurants
+    recommend_restaurants,
+    find_restaurant
+)
+
+from src.taxonomy import (
+    create_taxonomy_mapping
+)
+
+from src.visualization import (
+    create_recommendation_map
 )
 
 restaurants = pd.read_csv("/Users/edgardomosesezekielaverilla/Restaurant-Recommendation-System-Redux/data/processed/restaurants_clean.csv")
 
 taxonomy = pd.read_csv("/Users/edgardomosesezekielaverilla/Restaurant-Recommendation-System-Redux/data/reference/category_mapping.csv", encoding="cp1252")
 
-taxonomy_keep = taxonomy[
-    taxonomy["Keep"] == "Yes"
-]
-
-mapping = taxonomy_keep.set_index(
-    "Category"
-).to_dict("index")
+mapping = create_taxonomy_mapping(
+    taxonomy
+)
 
 restaurants = extract_features(
     restaurants,
@@ -54,11 +60,9 @@ city = st.selectbox(
     available_cities
 )
 
-recommend = st.button("Recommend")
+if st.button("Recommend"):
 
-if recommend:
-
-    recommendations = recommend_restaurants(
+    st.session_state["recommendations"] = recommend_restaurants(
         restaurant_name=restaurant_name,
         city=city,
         restaurants=restaurants,
@@ -66,6 +70,32 @@ if recommend:
         top_n=10
     )
 
+    selected_index = find_restaurant(
+        restaurant_name,
+        city,
+        restaurants
+    )
+
+    st.session_state["selected_restaurant"] = (
+        restaurants.loc[selected_index]
+    )
+
+if "recommendations" in st.session_state:
+
+    recommendations = st.session_state["recommendations"]
+
+    selected_restaurant = st.session_state["selected_restaurant"]
+
+    restaurant_map = create_recommendation_map(
+        selected_restaurant=selected_restaurant,
+        recommendations=recommendations,
+        restaurants=restaurants
+    )
+
+    st_folium(
+        restaurant_map,
+        width=900,
+        height=600
+    )
+
     st.dataframe(recommendations)
-
-
